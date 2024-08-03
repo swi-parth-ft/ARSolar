@@ -39,13 +39,14 @@ struct ARViewWrapper: UIViewRepresentable {
 
 class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
     let sceneView = ARSCNView()
-
+    private var scaledNodes = Set<SCNNode>()
+    
     override init() {
         super.init()
         sceneView.delegate = self
         sceneView.autoenablesDefaultLighting = true
         sceneView.showsStatistics = true
-        sceneView.debugOptions = [.showFeaturePoints, .showWorldOrigin]
+        sceneView.debugOptions = []
     }
 
     func setupAR() {
@@ -167,9 +168,44 @@ class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
             planet.node.position = SCNVector3(centerPosition.x + xOffset, centerPosition.y, centerPosition.z + zOffset)
             sceneView.scene.rootNode.addChildNode(planet.node)
         }
+        
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+                sceneView.addGestureRecognizer(tapGesture)
     }
-
-
+    
+    @objc func handleTap(_ gestureRecognize: UITapGestureRecognizer) {
+            let location = gestureRecognize.location(in: sceneView)
+            let hitResults = sceneView.hitTest(location, options: [:])
+            
+        if let tappedNode = hitResults.first?.node {
+                if scaledNodes.contains(tappedNode) {
+                    scaleDownNode(tappedNode)
+                    scaledNodes.remove(tappedNode)
+                } else {
+                    scaleUpNode(tappedNode)
+                    scaledNodes.insert(tappedNode)
+                }
+            }
+        }
+    
+    func scaleUpNode(_ node: SCNNode) {
+        let raiseAction = SCNAction.moveBy(x: 0, y: 0.2, z: 0, duration: 0.5)
+            let scaleUpAction = SCNAction.scale(to: 1.5, duration: 0.5)
+            let scaleDownAction = SCNAction.scale(to: 1.0, duration: 0.5)
+        
+        let groupAction = SCNAction.group([raiseAction, scaleUpAction])
+        let sequence = SCNAction.sequence([groupAction, scaleDownAction])
+            node.runAction(sequence)
+        }
+    
+    func scaleDownNode(_ node: SCNNode) {
+            let lowerAction = SCNAction.moveBy(x: 0, y: -0.2, z: 0, duration: 0.5)
+            let scaleDownAction = SCNAction.scale(to: 1.0, duration: 0.5)
+            let groupAction = SCNAction.group([lowerAction])
+            let sequence = SCNAction.sequence([groupAction])
+            
+            node.runAction(sequence)
+        }
 
 
 
