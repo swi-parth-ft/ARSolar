@@ -92,6 +92,8 @@ class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
             return node
         }
         
+        
+        
         // Function to create a dotted orbit
         func createDottedOrbit(radius: Float) -> SCNNode {
             let orbitNode = SCNNode()
@@ -138,7 +140,7 @@ class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
         sceneView.scene.rootNode.addChildNode(sunNode)
 
         // Define orbit radii
-        let orbitRadii: [Float] = [0.15 / 2, 0.25 / 2, 0.35 / 2, 0.45 / 2, 0.55 / 2, 0.65 / 2, 0.75 / 2, 0.85 / 2]
+        let orbitRadii: [Float] = [0.15 / 2, 0.25 / 2, 0.35 / 2, 0.45 / 2, 0.55 / 2, 0.65 / 2, 0.75 / 2, 0.85 / 2, 0]
 
         // Add orbits
         for radius in orbitRadii {
@@ -149,6 +151,7 @@ class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
 
         // Position planets on their orbits
         let planets: [(name: String, node: SCNNode, distance: Float)] = [
+            (name: "sun", node: sunNode, distance: orbitRadii[8]),
             (name: "mercury", node: mercuryNode, distance: orbitRadii[0]),
             (name: "venus", node: venusNode, distance: orbitRadii[1]),
             (name: "earth", node: earthNode, distance: orbitRadii[2]),
@@ -173,6 +176,39 @@ class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
                 sceneView.addGestureRecognizer(tapGesture)
     }
     
+    // Create a card node with the item's name
+            func createCard(name: String, distance: Float, codename: String) -> SCNNode {
+                
+                let details = """
+                   Name: \(name)
+                   Distance: \(String(format: "%.2f", distance)) AU
+                   Codename: \(codename)
+                   """
+                
+                let cardGeometry = SCNPlane(width: 0.1, height: 0.05) // Adjust size as needed
+                    let cardMaterial = SCNMaterial()
+                    cardMaterial.diffuse.contents = UIColor.white.withAlphaComponent(0.5) // White color with opacity
+                    cardGeometry.materials = [cardMaterial]
+                    
+                    let cardNode = SCNNode(geometry: cardGeometry)
+                    
+                    // Create the text geometry
+                    let textGeometry = SCNText(string: details, extrusionDepth: 0.05)
+                    textGeometry.font = UIFont.systemFont(ofSize: 2) // Adjust font size as needed
+                    textGeometry.alignmentMode = CATextLayerAlignmentMode.left.rawValue // Align text to the left
+                    textGeometry.firstMaterial?.diffuse.contents = UIColor.black // Text color
+                    
+                    // Create the text node
+                    let textNode = SCNNode(geometry: textGeometry)
+                textNode.position = SCNVector3(-0.04, -0.02, 0) // Adjust position to fit within card
+                    textNode.scale = SCNVector3(0.005, 0.005, 0.005) // Scale text to fit on the card
+                    
+                    // Add text node to card node
+                    cardNode.addChildNode(textNode)
+                    
+                    return cardNode
+            }
+    
     @objc func handleTap(_ gestureRecognize: UITapGestureRecognizer) {
             let location = gestureRecognize.location(in: sceneView)
             let hitResults = sceneView.hitTest(location, options: [:])
@@ -194,17 +230,58 @@ class ARViewModel: NSObject, ObservableObject, ARSCNViewDelegate {
             let scaleDownAction = SCNAction.scale(to: 1.0, duration: 0.5)
         
         let groupAction = SCNAction.group([raiseAction, scaleUpAction])
-        let sequence = SCNAction.sequence([groupAction, scaleDownAction])
+        let sequence = SCNAction.sequence([groupAction])
             node.runAction(sequence)
+        if let planetName = node.name {
+                let distanceFromSun: Float // Define appropriate distance for each planet
+                let codename: String // Define appropriate codename for each planet
+                
+                switch planetName {
+                case "mercury":
+                    distanceFromSun = 0.39
+                    codename = "Hermes"
+                case "venus":
+                    distanceFromSun = 0.72
+                    codename = "Aphrodite"
+                case "earth":
+                    distanceFromSun = 1.0
+                    codename = "Terra"
+                case "mars":
+                    distanceFromSun = 1.52
+                    codename = "Ares"
+                case "jupiter":
+                    distanceFromSun = 5.20
+                    codename = "Zeus"
+                case "saturn":
+                    distanceFromSun = 9.58
+                    codename = "Cronus"
+                case "uranus":
+                    distanceFromSun = 19.22
+                    codename = "Uranus"
+                case "neptune":
+                    distanceFromSun = 30.05
+                    codename = "Poseidon"
+                default:
+                    distanceFromSun = 0.0
+                    codename = ""
+                }
+                
+                let textNode = createCard(name: planetName, distance: distanceFromSun, codename: codename)
+            textNode.position = SCNVector3(0, 0.1, 0) // Adjust position as needed
+                node.addChildNode(textNode)
+            }
         }
     
     func scaleDownNode(_ node: SCNNode) {
-            let lowerAction = SCNAction.moveBy(x: 0, y: -0.2, z: 0, duration: 0.5)
+        let lowerAction = SCNAction.moveBy(x: 0, y: -0.2, z: 0, duration: 0.5)
             let scaleDownAction = SCNAction.scale(to: 1.0, duration: 0.5)
-            let groupAction = SCNAction.group([lowerAction])
+        let groupAction = SCNAction.group([lowerAction, scaleDownAction])
             let sequence = SCNAction.sequence([groupAction])
             
             node.runAction(sequence)
+        if let textNode = node.childNodes.first(where: { $0.geometry is SCNPlane }) {
+                textNode.removeFromParentNode()
+            }
         }
 
 
